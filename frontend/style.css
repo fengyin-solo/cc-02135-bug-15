@@ -422,6 +422,13 @@ h2 {
     transform: translateY(-1px);
 }
 
+.btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .btn-secondary {
     flex: 1;
     background: rgba(255, 255, 255, 0.05);
