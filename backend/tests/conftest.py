@@ -12,7 +12,16 @@ os.environ['UPLOAD_FOLDER'] = tempfile.mkdtemp()
 os.environ['DB_FILE'] = os.path.join(tempfile.mkdtemp(), 'test.db')
 
 from app import app
-from database import init_db, get_db
+from database import init_db
+from auth import clear_login_failures
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_failures():
+    """每个测试前后清空登录失败计数，保证限流测试相互隔离"""
+    clear_login_failures()
+    yield
+    clear_login_failures()
 
 
 @pytest.fixture
@@ -30,7 +39,8 @@ def auth_token():
     # 清除速率限制
     from auth import rate_limit_store
     rate_limit_store.clear()
-    
+    clear_login_failures()
+
     app.config['TESTING'] = True
     init_db()
     with app.test_client() as test_client:
@@ -44,6 +54,7 @@ def auth_token():
 @pytest.fixture
 def db_conn():
     """获取数据库连接"""
+    from database import get_db
     conn = get_db()
     yield conn
     conn.close()

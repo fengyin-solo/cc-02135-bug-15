@@ -6,7 +6,7 @@ from config import DB_FILE
 
 def get_db():
     """获取数据库连接"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_FILE, timeout=5)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -40,6 +40,15 @@ def init_db():
             token TEXT PRIMARY KEY,
             username TEXT NOT NULL,
             expires_at REAL NOT NULL
+        )
+    ''')
+
+    # 登录失败计数：按账号记录固定窗口，多进程/重试均以同一行为准
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS login_failures (
+            username TEXT PRIMARY KEY,
+            window_started_at REAL NOT NULL,
+            fail_count INTEGER NOT NULL DEFAULT 0
         )
     ''')
 

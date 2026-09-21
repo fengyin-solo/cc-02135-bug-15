@@ -8,7 +8,7 @@ from flask import request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from routes import files_bp
 from database import get_db
-from auth import verify_token, get_username_from_token, login_required
+from auth import verify_token, get_username_from_token, login_required, extract_token
 from config import UPLOAD_FOLDER, MAX_FILE_SIZE, BLOCKED_EXTENSIONS, SHARE_LINK_EXPIRE_HOURS, SHARE_LINK_MAX_DOWNLOADS
 
 logger = logging.getLogger(__name__)
@@ -80,12 +80,7 @@ def list_files():
 
 @files_bp.route('/api/download/<file_id>', methods=['GET'])
 def download_file(file_id):
-    # 优先从 Authorization 头获取 token，兼容查询参数（已废弃）
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Bearer '):
-        token = auth_header[7:]
-    else:
-        token = request.args.get('token')  # 向后兼容，建议前端迁移到 Authorization 头
+    token = extract_token()
 
     if not token or not verify_token(token):
         return jsonify({'error': '未授权或token已过期'}), 401
@@ -156,14 +151,6 @@ def increment_download_count(share_id):
     conn.close()
 
 
-def get_token_from_request():
-    """从请求中获取 token"""
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Bearer '):
-        return auth_header[7:]
-    return request.args.get('token')
-
-
 @files_bp.route('/api/share', methods=['POST'])
 @login_required
 def create_share():
@@ -205,7 +192,7 @@ def create_share():
     if max_downloads < 0:
         max_downloads = None
 
-    token = get_token_from_request()
+    token = extract_token()
     username = get_username_from_token(token)
 
     share_id = generate_short_id()
@@ -288,7 +275,7 @@ def download_by_share(share_id):
 @login_required
 def list_shares():
     """获取当前用户的所有分享链接"""
-    token = get_token_from_request()
+    token = extract_token()
     username = get_username_from_token(token)
 
     conn = get_db()
@@ -327,7 +314,7 @@ def list_shares():
 @login_required
 def delete_share(share_id):
     """删除分享链接"""
-    token = get_token_from_request()
+    token = extract_token()
     username = get_username_from_token(token)
 
     conn = get_db()
